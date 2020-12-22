@@ -1,0 +1,114 @@
+---
+title: "6 Degrees of Talented Women"
+output:
+  html_document:
+    df_print: paged
+---
+
+Back in the day, way before IMDb existed (How did we live?), people used to play movie trivia games. The most famous of these games is known as 6 degrees of Kevin Bacon. If you're unfamiliar, it's a game where you try to find the shortest connection between any actor and Kevin Bacon. Common side effects include singing Footloose and shouting, "You can't handle the truth!!!" 
+
+Insert Kevin Bacon dancing
+
+Let's look at an example with the incredible Milla Jovovich: Milla was in Zoolander 2 with Will Ferrel. Will Ferrel was in The Campaign with John Lithgow and John Lithgow was in Footloose with Kevin Bacon. That's 3 steps. Can you beat that? 
+
+But let's say you wanted to get *real* serious about this game. You don't want to guess at the shortest connection, you need to know it. Well, if you could construct a network of all movies and all the actors who starred in them, then you could find all possible shortest paths between two actors. Let's give this a try with a very small network of some very talented women. We'll start by creating a bipartite network of movie/actor relationships, then use the one-mode projection of the bipartite network to visualize the direct connections between the actors.   
+
+A bipartite network is a graphical representation of the relationships, or edges, *between* two different node types. To examine the connections between actors and the movies they acted in, one class of nodes will represent actors and the other node class will represent the movies they star in. For a bipartite network, an edge can only run between actors and movies, not from movies to movies or actors to actors. Let's generate a graph to show a bipartite network from the incident matrix *I*. Each row in *I* represents a movie and each column represents an actor. Feel free to move the nodes around by clicking and dragging!
+
+```{r, warning=FALSE, message=FALSE}
+
+library(igraph)
+library(visNetwork)
+library(htmlwidgets)
+
+# Incident matrix to represent bipartite graph.
+# Columns are actresses and rows are movies. 
+# 1: actress is in movie; 0: not in movie.
+I <- matrix(c(1, 1, 0, 0, 0,
+              1, 1, 1, 0, 0,
+              0, 0, 1, 1, 0,
+              0, 0, 1, 1, 1),
+       nrow = 5)
+
+# Name distinct node classes. 
+colnames(I) <- c("Queen Latifah", "Jada \n Pinkett Smith", 
+                 "Mila Kunis", "Kristen Bell")
+rownames(I) <- c("Set It Off", "Girls Trip", "Bad Moms", 
+                 "Forgetting \n Sarah Marshall", "Frozen")
+
+# Converting incident matrix to visNetwork object.
+net <- toVisNetworkData(graph_from_incidence_matrix(I))
+
+# Use images in nodes. 
+pathname <- "https://raw.githubusercontent.com/thatdarndata/BlogPosts/master/SixDegrees/Pics/"
+net$nodes$image <- paste0(pathname, 0:8, ".png")
+net$nodes$shape <- c(rep("image", 5), rep("circularImage", 4))
+
+# Plot. 
+(bipartite <- visNetwork(nodes = net$nodes, edges = net$edges) %>% 
+  visIgraphLayout(layout = "layout_as_bipartite") %>% 
+  visNodes(shapeProperties = list(useBorderWithImage = TRUE),
+           color = list(border = "BDBDBD",
+                        background = "BDBDBD",
+                        highlight = "BDBDBD")) %>%
+  visEdges(shadow = TRUE,
+           color = list(color = "BDBDBD", highlight = "3D3D3D")) %>%
+  visOptions(highlightNearest = list(enabled = T, hover = T), 
+             nodesIdSelection = T))
+
+saveWidget(bipartite, "bipartiteActors.html")
+```
+
+Now, to see the relationships *within* a node class we can use the one-mode projection of the bipartite network. For instance, this will allow us to visualize how many movies Jada Pinkett Smith and Mila Kunis have appeared in together. In a one-mode projection, the two actor nodes will have an edge connecting them if they star in one or more movies together. Mathematically, this can be represented by the matrix, $P$, where $P = I^TI$.
+
+The diagonals of the matrix P represent the number of movies each actor starred in overall. The off-diagonals represent the number of common movies shared by each actor pair. We'll now plot the one-mode projection where the node size is dependent on the total number of movies each actor stars in and edges are weighted by the number of movies each actor pair is in.  
+
+```{r}
+# Calculate weighted one-mode projection.
+P <- t(I) %*% I
+
+# Convert to visnetwork object.
+projNet <- toVisNetworkData(graph_from_adjacency_matrix(P, weighted = TRUE, 
+                                                        diag = FALSE, mode = 'undirected'))
+
+# Add weights according to edge strength and node size according to diagonals.
+projNet$edges$width <- projNet$edges$weight * 2
+projNet$nodes$size <- diag(P) * 10
+# Use images in nodes. 
+projNet$nodes$image <- paste0(pathname, 5:8, ".png")
+projNet$nodes$shape <- "circularImage"
+
+# Plot.
+(proj <- visNetwork(nodes = projNet$nodes, edges = projNet$edges) %>% 
+  visNodes(shapeProperties = list(useBorderWithImage = TRUE),
+           color = list(border = "BDBDBD",
+                        background = "BDBDBD",
+                        highlight = "BDBDBD")) %>%
+  visEdges(color = list(color = "BDBDBD", highlight = "3D3D3D")))
+
+saveWidget(proj, "actorProjection.html")
+```
+
+We can see from the graph that Jada and Kristen starred in more movies than Mila and Queen Latifah (considering the bipartite network only, not their actual filmography). We can also see that Queen Latifah has only starred in a movie with Jada but not with Kristen or Mila. Perhaps a Bad Moms cameo for Girls Trip 2 could fix that?! 
+
+Jada has the greatest number of connections since she connects to everyone in the network. However, based on edge weight, we can see that Jada has starred in more movies with Queen Latifah than Mila or Kristen. On the other hand, Kristen has starred in more movies with Mila than Jada. 
+
+Now that we've gotten started with a small example, can you expand the network to include more movies and actors? How about the gut-busting Kathryn Hahn?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

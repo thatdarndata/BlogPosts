@@ -1,0 +1,87 @@
+---
+title: "How to create co-occurrence networks with the R packages 'cooccur' and 'visNetwork'"
+output:
+  html_document:
+    df_print: paged
+---
+
+Co-occurrence networks are a graphical representation of how frequently variables appear together. They're commonly used in ecology and text mining, where co-occurrence measures how frequently two species are seen together within a sampling site or how frequently two words are present in a single document, respectively. A co-occurrence network allows us to examine several pairs of co-occurring variables simultaneously. To construct a co-occurrence network, each variable is represented by a node, or point. An edge, or link, connecting two nodes represents the co-occurrence between those two variables. 
+
+Here, we'll look at how to construct co-occurrence networks in R using the 'cooccur' and 'visNetwork' packages. In this example, an edge will represent only co-occurrences that are higher or lower than would be expected by chance using a probabilistic model (Veech, 2013). We'll start with 'cooccur' to calculate statistically significant pairwise co-occurrences. We'll then feed those results into 'visNetwork' for a network visualization of species co-occurrence. Ready Freddy?
+
+## Finches data set
+
+Co-occurrence begins with presence-absence data. In other words, for each sample, is each variable present or not? For this tutorial, we'll use the finches data set from the 'cooccur' package. The finches data set records the presence of 13 species of finches across 17 different sampling sites where the presence of a species in a site is represented with a 1 and its absence with a 0. We'll print the first 5 rows and columns to get an idea of what it looks like.    
+
+```{r}
+library(cooccur)
+library(visNetwork)
+
+# Load finches data set.
+data(finches)
+finches[1:5, 1:5]
+```
+
+## Co-occurrence analysis
+
+Using the probabilistic model of co-occurrence (Veech, 2013), the **cooccur()** function will calculate the p-values associated with pairwise co-occurrences and return a list of class 'cooccur'. Printing this class returns only the significant interactions. We'll store the significant interactions to create our edge list for visNetwork.   
+
+```{r}
+# Find significant pairwise co-occurrences.
+co <- print(cooccur(finches, spp_names = TRUE))
+```
+
+Looking at our results, we can see each row specifies a significant interaction. In the first column, sp1, we see the numeric label associated with the first species (species 1) of each interaction. This numeric label aligns with the species order in the data frame. For example, since the first row in the finches data set is "Geospiza magnirostris", it's numeric label is 1. In the second column, sp2, we find the numeric label associated with species 2. We can match the numeric label with the species name in two ways: 1) Use the numeric label and rownames() to select the corresponding species from the finches data frame, e.g. rownames(finches)[co$sp1], or 2) Use spp_names = T in the cooccur function. This gives us two extra columns, sp1_name and sp2_name, with the species name for sp1 and sp2. To double check that these give us the same output, we can use: 
+
+```{r}
+# Check sp1_name matches numeric label for species.
+co[, 'sp1_name'] == rownames(finches)[co$sp1]
+co[, 'sp2_name'] == rownames(finches)[co$sp2]
+```
+
+If sp1_name returns your site names instead of your species, you'll want to transpose your data frame and re-run cooccur(). 
+
+Columns p_lt and p_gt give us our p-values. If p_lt < 0.05, then the species pair co-occurs at a frequency *lower* than we would expect to find by chance. If p_gt < 0.05, the pair co-occurs at a rate *higher* than we would expect to find by chance. Since we've stored only significant interactions, either p_lt or p_gt will be less than 0.05 for each row.    
+
+## Network visualization
+
+Now's the fun stuff! We'll plot our co-occurrence networks using 'visNetwork.' 'visNetwork' creates interactive network visualizations in R. The **visNetwork()** function takes two arguments: 1) a data frame describing the nodes in the network, and 2) a data frame describing the edges in the network. We'll start with the nodes data frame. At a minimum, the nodes data frame needs an id column to identify each node. We'll set our ids to match the numeric labels returned with cooccur (1-13). In addition, we'll label our nodes by species name, specify a color, and add shadow for some depth.     
+
+```{r}
+# Create a data frame of the nodes in the network. 
+nodes <- data.frame(id = 1:nrow(finches),
+                    label = rownames(finches),
+                    color = "#606482",
+                    shadow = TRUE)  
+```
+
+The edges data frame needs at least two columns, 'from' and 'to', which should correspond with the ids from the nodes data frame. Since we used cooccur's numeric labels as our ids, we can use sp1 as our 'from' column and 'sp2' as our to column. (Since our network isn't directed, we could reverse these and it wouldn't matter.) We'll then add some color so our edges match our nodes such that we'll have a lighter color for co-occurrences that occur at a lower frequency than expected and a darker color for co-occurrences that occur at a higher frequency. To make the distinction between 'higher' and 'lower' even more obvious, we'll also specify that co-occurrences that are lower than expected have a dashed line. 
+
+```{r}
+# Create an edges dataframe from the significant pairwise co-occurrences.
+edges <- data.frame(from = co$sp1, to = co$sp2,
+                    color = ifelse(co$p_lt <= 0.05, "#B0B2C1", "#3C3F51"),
+                    dashes = ifelse(co$p_lt <= 0.05, TRUE, FALSE))
+```
+
+Finally, we'll plot the network using a layout from the 'igraph' package. You don't need to load 'igraph' to have access to these layouts but you can see the options here: https://igraph.org/r/doc/layout_.html. Specifically, we'll use the Kamada-Kawai layout algorithm but I encourage you to play around with the layouts to see which one you like best.
+
+```{r}
+# Plot.
+visNetwork(nodes = nodes, edges = edges) %>%
+  visIgraphLayout(layout = "layout_with_kk")
+```
+
+Ooh la la! That's one good looking co-occurrence network. 😏 You can use the code on GitHub to generate your very own co-occurrence networks. As a bonus, you'll get to experience the interactive nature of the networks firsthand! 
+
+### References
+
+Almende, B.V., Benoit Thieurmel, Benoit & Titouan Robert (2019).
+  visNetwork: Network Visualization using 'vis.js' Library. R package
+  version 2.0.8. https://CRAN.R-project.org/package=visNetwork
+
+Griffith, Daniel M., Veech, Joseph A., & Marsh, Charles J. (2016).
+  cooccur: Probabilistic Species Co-Occurrence Analysis in R. Journal
+  of Statistical Software, 69(2), 1-17. doi:10.18637/jss.v069.c02
+
+Veech, Joseph A. (2013) A probabilistic model for analysing species co‐occurrence. Global Ecology and Biogeography, 22, 252– 260. https://doi.org/10.1111/j.1466-8238.2012.00789.x

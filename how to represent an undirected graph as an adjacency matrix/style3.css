@@ -1,0 +1,21 @@
+/* Whole document: */
+body{
+  font-family: Helvetica-Light;
+  font-size: 14pt;
+  color: #025154;
+}
+/* Headers */
+h1{
+  font-family: Didot;
+  font-size: 24 pt;
+  color: #809280;
+}
+h2,h3,h4,h5,h6{
+  font-family: Helvetica-Bold;
+  font-size: 16pt;
+  color: #DDCBCB;
+}
+code.r{ /* Code block */
+  font-family: Courier;
+  font-size: 12pt;
+}

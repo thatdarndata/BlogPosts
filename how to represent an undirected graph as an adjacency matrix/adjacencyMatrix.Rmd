@@ -1,0 +1,107 @@
+---
+title: "How to Represent an Undirected Graph as an Adjacency Matrix"
+output:
+  html_document:
+    highlight: pygments
+    css: style3.css
+---
+
+Graphs are an excellent way to gain a deeper understanding of large systems of information as they provide us a flexible and intuitive way to generate insight through visualizing the relationships within the data. In this tutorial, we'll focus specifically on undirected graphs. Both Facebook and LinkedIn connections can be illustrated with undirected graphs because a connection between two people always goes in both directions. Such is the case of the reciprocal nature of these websites (friendships must be mutual, invitations must be accepted, etc.), and unlike platforms such as Twitter where you can follow someone but they don't necessarily have to return the follow--e.g. Béyonce still hasn't followed me back. 
+
+But what do graphs have to do with matrices, you could ask? Well, in the world of data science, you cannot escape matrices--try as you might! That is because matrices are an excellent way of representing data in a compact manner that your computer and inner statistician will *love* (HELLO GRAPH ANALYTICS!) So, let's learn how to take a visually interpretable graph, and give it a compact representation which you can use for generating graph metrics!
+
+We'll start by creating the following graph with the visNetwork package. To isolate a node and its relationships within the graph, simply click on a node or select it from the drop-down menu in the upper left corner.
+
+```{r, message=FALSE, warning=FALSE}
+library(visNetwork)
+# Create nodes dataframe for visNetwork.
+nodes <- data.frame (id = 1:6, label = 1:6, 
+                     color = rep('#7D9CB8', 6))
+# Create edges dataframe for visNetwork.
+edges <- data.frame(from = c(1, 2, 3, 3, 4, 5), 
+                    to = c(2, 3, 4, 5, 5, 6))
+# Plot network using visNetwork.
+visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, 
+             nodesIdSelection = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(htmlwidgets)
+# Store graph to save as widget.
+undirectedGraph <- visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE)
+# Save graph as widget.
+saveWidget(undirectedGraph, "undirectedGraphEx.html")
+```
+
+To represent this graph as the adjacency matrix A, we'll let rows and columns represent nodes, or vertices. For the current example, we'll have 6 rows (representing nodes 1-6) and 6 columns (again, representing nodes 1-6). We should always have a square matrix! Each entry represents the presence or absence of an edge, or relationship, between the two nodes--1 indicates an edge, 0 no edge.
+
+$A_{ij} = \begin{cases} 1 &\text{if  there is an edge between nodes i and j} \\ 0 &\text{otherwise}\end{cases}$
+
+For the graph above, the adjacency matrix looks like this:  
+
+$A = \begin{bmatrix}
+0& 1& 0& 0& 0& 0\\
+1& 0& 1& 0& 0& 0\\
+0& 1& 0& 1& 1& 0\\
+0& 0& 1& 0& 1& 0\\
+0& 0& 1& 1& 0& 1\\
+0& 0& 0& 0& 1& 0
+\end{bmatrix}$
+
+Since there's an edge going from node 1 to 2, we see a 1 in both $A_{12}$ (row 1, column 2) and $A_{21}$ (row 2, column 1). The lack of directionality in the graph results in a symmetric matrix. 
+
+Also notice that the diagonal consists entirely of zeros. That's because there are no edges from any node to itself. This is an easy way to check for loops! 
+
+However, real life often has loops, and nodes can even have more than one edge between them. So, let's now look at an example with loops and multi-edges:
+
+```{r}
+# Create new edges dataframe for visNetwork.
+edgesMessy <- data.frame(from = c(1, 2, 3, 3, 4, 5, 1, 2, 5, 5), to = c(2, 3, 4, 5, 5, 6, 1, 3, 6, 6))
+# Plot network using visNetwork.
+visNetwork(nodes, edgesMessy) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(htmlwidgets)
+# Store graph to save as widget.
+undirectedGraph2 <- visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE)
+# Save graph as widget.
+saveWidget(undirectedGraph2, "undirectedGraphEx2.html")
+```
+
+The adjacency matrix looks as follows: 
+
+$A = \begin{bmatrix}
+2& 1& 0& 0& 0& 0\\
+1& 0& 2& 0& 0& 0\\
+0& 2& 0& 1& 1& 0\\
+0& 0& 1& 0& 1& 0\\
+0& 0& 1& 1& 0& 3\\
+0& 0& 0& 0& 3& 0
+\end{bmatrix}$
+
+Notice that a loop is represented as a 2. For undirected graphs, each loop adds 2 since it counts each time the edge meets the node. (If there were two loops for node 1, the entry would be 4.) 
+
+We can also see that there are two edges between nodes 1 and 2. Therefore, $A_{12}$ and $A_{21}$ are now represented by a 2. The edge number between nodes 5 and 6 has also changed accordingly.
+
+In this tutorial, we represented undirected graphs as adjacency matrices. However, adjacency matrices can also represent [directed graphs](https://thatdarndata.com) and [weighted networks](https://thatdarndata.com). 
+
+To recap:  
+
+  + adjacency matrices are always square  
+  + adjacency matrices for **undirected** graphs are symmetric  
+  + an undirected graph with no loops will have zeros along the diagonal  
+  + each loop in an undirected graph is represented by a 2  
+  + adjacency matrices can account for multi-edges  
+
+To download an R notebook containing this lecture and all code, click [here.](https://github.com/thatdarndata/BlogPosts/blob/master/how%20to%20represent%20an%20undirected%20graph%20as%20an%20adjacency%20matrix/adjacencyMatrix.Rmd)
+
+
+
+
+
+
