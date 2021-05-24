@@ -1,0 +1,115 @@
+---
+title: "From **igraph** to **visNetwork**: Giving your networks a user-friendly makeover"
+output: html_notebook
+---
+
+  When it comes to network analysis, **igraph** is a beast of a package with extensive documentation. (https://igraph.org/r/#docs) If you do network analysis in R, chances are you've at least heard of it. With **igraph**, you can create and compare deterministic or stochastic networks, calculate centrality measures, and find communities within a network. You can even implement graph algorithms on a network with *millions* of nodes and edges! 
+  
+  Even when it comes to visualization, **igraph** has an abundance of options. First, there's the basic functionality you'd expect for plotting: changing the size, shape, labels, and layout of the network. But you can even move beyond the basics by creating interactive graphs with `tkplot()`--although they aren't recommended for large graphs. Finally, with the **rgl** package, you can construct and visualize 3D networks with OpenGL.
+
+  Yet, even with all of the network visualization functionality **igraph** has to offer, I still find myself drawn towards **visNetwork** for even the most basic plotting. By default, **visNetwork** creates beautiful, interactive networks compatible with the RStudio Viewer, R Notebooks, and **shiny**. It's without a doubt my go-to network visualization package for network analysis. With very little code, you can quickly create a polished network capable of highlighting selected nodes and their neighbors. It's incredibly useful for network analysis, but it's also great for very producing clean, professional-looking networks for publication.
+  
+  In this article, we'll look plotting an **igraph** object with **visNetwork**. We'll start with the default plot before adding highlighting functionality. Finally, we'll look at changing the color of the nodes and how to use different layout algorithms. 
+
+### A quick demonstration
+
+  To illustrate the ease of using **visNetwork** with **igraph** objects, we'll load the Nonline graph from the **igraph** package. It consists of 9 subgraphs with 50 nodes and 12 edges. 
+
+```{r}
+# Load packages. 
+library(igraph)
+library(visNetwork)
+# Load the nonline graph.
+ig <- graph.famous("Nonline")
+# Plot with igraph.
+plot(ig)
+```
+
+  As you can see, the default plot from **igraph** clearly shows 9 subgraphs. However, it's extremely difficult to see the relationships within each subgraph. Let's compare this to the default plotting with **visNetwork**. We'll use the `visIgraph()` function to display the **igraph** object with **visNetwork**. 
+
+```{r}
+# Plot igraph object with visNetwork.
+visIgraph(ig)
+```
+
+  Ah, yes! Much clearer now! Not only can we see the distinct subgraphs, but we can also see the relationships within each subgraph as well. Now, what if we wanted to select a particular node and highlight its neighbors? Luckily, that's fairly straightforward! 
+
+### User-friendly node selection
+
+  Being able to select a particular node by its id is enormously helpful when you're interested in a particular node or a small set of nodes. Alternatively, you might want to quickly identify what appears to be a central node by clicking on the network. Either way, **visNetwork** makes user-friendly node selection painless. 
+
+  To start, we'll use the pipe operator (%>%) to combine other **visNetwork** functions which allow us to specify additional modifications for our network. For general network options, we'll use the `visOptions()` function. To highlight specific nodes by their id, we'll set `nodesIdSelection  = TRUE`. To highlight the selected node's neighbors as well, we set `highlightNearest = TRUE`. 
+
+```{r}
+# Highlight selected node and its neighbors. 
+visIgraph(ig) %>% 
+  visOptions(nodesIdSelection = TRUE, highlightNearest = TRUE)
+```
+
+To get the full interactive experience, download the R notebook: igraph2visNetwork.Rmd (#link). 
+
+### A fresh coat of paint
+
+  Personally, I find the default color scheme for **visNetwork** rather pleasing. Nonetheless, being able to change the color of your network is easy with the `visNodes()` function. We'll specify a hexadecimal string for the color argument, but you can also use the built-in color names or a color palette from a package. Finally, for a little extra zazz, we'll set `shadow = TRUE` to add some depth to the nodes. 
+
+```{r}
+# Change the color and add a shadow. 
+visIgraph(ig) %>% 
+  visOptions(nodesIdSelection = TRUE, highlightNearest = TRUE) %>%
+  visNodes(color = "#6CAE97", shadow = TRUE)
+```
+
+### Using igraph layout algorithms
+
+  Ideally, networks should be both aesthetically pleasing and simple to understand. Unfortunately, the exact same network can look quite different based on where the nodes are located and how they're spaced out. Some layouts will make interpretation easier, while others, especially those layouts with edges that criss-cross, will be harder. The optimal layout depends on the structure of the network. In some cases, such as a hierarchical network, the optimal layout will be known beforehand. In other cases, the optimal layout isn't known and you may want to try different layout algorithms to see which one is the best. 
+
+  To see how we can compare different layout algorithms, let's take a look at how we can use the graph layout options from **igraph** with **visNetwork**. For this example, we'll use the "Krackhardt kite" graph from the `graph.famous()` function. To use the **igraph** layout options, we'll use the `visIgraphLayout()` function from **visNetwork** and supply the layout argument with a layout option from **igraph**. We'll start with "layout_nicely". The `layout_nicely()` function from **igraph** will try to find the best layout algorithm for the given network. To see other available layout options, you can look at the documentation for `layout_nicely()` with `?layout_nicely`. Other layout options can be found at the bottom of the documentation. 
+
+```{r}
+# Load a fully connected graph. 
+ig2 <- graph.famous("Krackhardt kite")
+# Plot graph with layout_nicely.
+visIgraph(ig2) %>% 
+  visIgraphLayout(layout = "layout_nicely")
+```
+Now, let's see what the network looks like if we use "layout_as_star".
+
+```{r}
+# Plot graph with layout_as_star.
+visIgraph(ig2) %>% 
+  visIgraphLayout(layout = "layout_as_star")
+```
+Wow! It might take a moment to recognize this network as being the same network from above. A network's layout can greatly influence the speed and accuracy of a network's interpretation. This is why it's great to have several layout algorithms available for use with **visNetwork**.
+
+### Beyond the basics
+
+Hopefully, this is enough to get you started using **visNetwork** with **igraph**. However, there's a lot more that can be done to blend the best of **igraph** with the best of **visNetwork**. For instance, we could highlight nodes with high centrality scores, mark the shortest path, or color the network by cliques or communities. If you're interested in a tutorial covering these topics, please leave a comment!
+
+Should I write more articles like this? If you liked this article, make sure to clap or add a comment. I'll take that as a vote for more. 
+
+
+Citations: 
+
+Adler, D., Murdoch, D., et al. (2021). rgl: 3D
+  Visualization Using OpenGL. R package version 0.105.13.
+  https://CRAN.R-project.org/package=rgl
+
+Almende B.V., Benoit Thieurmel and Titouan Robert (2019).
+  visNetwork: Network Visualization using 'vis.js' Library. R package
+  version 2.0.9. https://CRAN.R-project.org/package=visNetwork
+
+Csardi G, Nepusz T: The igraph software package for complex network
+  research, InterJournal, Complex Systems 1695. 2006.
+  https://igraph.org
+  
+R Core Team (2020). R: A language and environment for statistical computing.
+  R Foundation for Statistical Computing, Vienna, Austria. URL
+  https://www.R-project.org/.
+  
+  
+R version 4.0.2 (2020-06-22)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Catalina 10.15.7
+
+
+
