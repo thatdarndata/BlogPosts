@@ -1,0 +1,223 @@
+---
+title: "Node customization for stunning networks: merging igraph and visNetwork"
+output: html_notebook
+---
+
+
+As we saw earlier (LINK), network visualization in R is a breeze with the visNetwork package. The graphs are gorgeous, interactive, and fun to play with. In this article, we'll look at how we can customize the nodes of our network to convey additional information. First, we'll learn how to color a network by a variable. Then, we'll leverage the power of 'igraph' to find and highlight nodes with high centrality scores. Finally, we'll use 'igraph' once more to identify and color communities. 
+
+# Fundamentals of visNetwork
+
+Before we dive right in, let's take a moment to discuss the fundamentals of 'visNetwork.' In the previous tutorial (LINK), we used visIgraph() to plot our networks. This time, we're going to use the visNetwork() function. Why? Well, quite simply, by using the visNetwork() function, we'll have a greater degree of control over our node appearance. The visNetwork() function takes two arguments: 1) a data frame describing the **nodes** in the network, and 2) a data frame describing the **edges** in the network. 
+
+### Nodes
+
+The **nodes** data frame needs, at a minimum, an **id** column to identify each node. Each node must have a *unique* **id**. Now, this **id** is not necessarily what you want your node to be named. It *can* be, and by default it *will* be, but it's actually the **label** that controls your node name. Unlike **id**, the node **label** does not need to be unique. So if two nodes have the same name, 'visNetwork' will be able to distinguish them by their id. 
+
+As an example, if your network consisted of students, the **id** would be the student's ID number and the **label** would be the student's name. There might be multiple students named Ashley Brown, but each Ashley will have their own unique student ID to differentiate them.  
+
+### Edges 
+
+The **edges** data frame, on the other hand, needs at least two columns: 'from' and 'to.' These columns will tell 'visNetwork' to draw a line *from* a particular node, as given by its **id**, *to* another node, also specified by its **id**. 
+
+### Adding additional columns to your nodes and edges data frames
+
+To customize the nodes or edges in your network, simply add additional columns to the respective data frame, specifying the properties you'd like to modify. For instance, if you'd like to specify a label for each node, create a **label** column in the **nodes** data frame with a label for each node in the network. Other node properties you can modify include shape, size, color, and shadow. To see all available options, check out the documentation with **?visNodes** and **?visEdges**.
+
+### Transforming an igraph network into the visNetwork format
+
+Turning an igraph object into a **nodes** and **edges** data frame is straightforward (usually) using the toVisNetworkData() function. Supplying toVisNetworkData() with an 'igraph' network will return a list containing both the **nodes** and the **edges** data frame. Easy peasy!
+
+# The Zachary network
+
+For this tutorial, we're going to use the famous Zachary network (1977). The Zachary network is a social network tracing the friendships within a karate club. In total, there are 34 members in the club and 78 friendships. In other words, our network has 34 nodes, with each node representing a member, and 78 edges, with each edge representing a friendship. Let's start by loading the 'igraph' and 'visNetwork' packages. Then we'll load the Zachary graph using graph.famous() and quickly plot it using visIgraph() to give us an idea of what our network looks like. 
+
+```{r}
+# Load packages. 
+library(igraph)
+library(visNetwork)
+# Load famous Zachary graph.
+zach <- graph.famous("Zachary")
+# Plot quickly.
+visIgraph(zach)
+```
+
+# Coloring the nodes by belt color
+
+In karate, belts are worn to represent a student's rank. If we knew each student's belt color, we could color our network so each member's node would reflect their belt color. Unfortunately, we don't know each member's belt color. However, we can pretend we do and create our own variable representing belt color. 
+
+We'll start by creating a color palette to match karate belt colors. There are 9 different belt colors in karate: white, yellow, orange, green, blue, purple, red, brown, and black. To create our belt color variable, we'll use sample() to randomly select a belt color from our color palette for each member. However, we won't give each belt the same probability of getting selected. Instead, we'll assume that since each belt is progressively harder to earn, we will see fewer people with the higher-ranked belts compared to lower-ranked belts. 
+
+```{r}
+set.seed(4)
+# HTML color codes for white, yellow, orange, 
+# green, blue, purple, red, brown, black
+colPal <- c("#ECECEC", "#F9D597", "#EE9C77", 
+            "#46887C", "#4270A4", "#786696", 
+            "#A8534C", "#624E4D", "#232323")
+# Probability of selecting each belt color.
+probs <- c(0.5, 0.25, 0.1, 0.05, 0.03, 0.03, 0.03, 0.005, 0.005)
+
+# Get a belt color for each member. 
+beltColors <- sample(colPal, size = 34, replace = TRUE, prob = probs)
+```
+
+Now that we have a vector of belt colors for each member, we'll want to add it as a column to our **nodes** data frame. But wait! We don't have a **nodes** data frame yet! Let's generate our **nodes** and **edges** data frame using the toVisNetworkData() function. Recall, toVisNetworkData() returns a list consisting of the **nodes** and **edges** data frame. We're going to split the list up to make things a bit easier to read. However, this really isn't necessary. If you're comfortable with lists, you can skip this part and use list notation when adding columns to the nodes data frame.
+
+```{r}
+# Convert igraph network into visNetwork format
+visZach <- toVisNetworkData(zach)
+# Grab nodes data frame.
+nodes <- visZach$nodes
+# Grab edges data frame. 
+edges <- visZach$edges
+```
+
+Now we have our **nodes** and **edges** data frame. Notice that the **nodes** data frame has a **label** column that matches the **id** column. Unless otherwise specified, 'visNetwork' will use the **id** as the node **label**. If we happened to know our members' names we could update our labels to reflect each member's name. Unfortunately, we don't. But you can always create some if you'd like!
+
+Let's add our beltColors vector to our nodes data frame. Because we're specifying the color of the nodes, we'll name our new column 'color.' We can tell that 'color' is a valid column name that will be recognized by 'visNetwork' since it's one of the arguments listed in **visNodes()**. 
+
+```{r}
+# Add color column to nodes data frame. 
+nodes$color <- beltColors
+```
+
+To plot the network, we'll supply visNetwork() with our **nodes** and **edges** data frames. 
+
+```{r}
+# Plot. 
+visNetwork(nodes, edges)
+```
+
+There we go! We can now see our Zachary network colored by each member's belt color. Notice how most of the members have either a white or a yellow belt. 
+
+# Highlighting nodes with high centrality scores
+
+Let's switch things up and look at how we can color nodes with high centrality scores. To do this, we'll use 'igraph' to calculate our centrality scores. To get a bit of variety with this exercise, we'll color our nodes in two different ways. First, we'll look at degree centrality and highlight nodes with 9 or more friendships. Second, we'll look at eigenvector centrality and color each node based on its centrality score. 
+
+#### Degree centrality
+
+Degree centrality measures a node's connectivity by counting the number of edges connected to each node. To find each node's degree, or the number of friendships associated with each node, we'll use the degree() function from 'igraph'. The **degree()** function will return a vector listing the degree associated with each node. 
+
+```{r}
+# Calculate degree for each node. 
+degree(zach)
+```
+
+We can see from degree that the first node, or member, has 16 friendships, or edges connected to that node. Since we only want to highlight nodes with 9 or more friendships, let's see which nodes have a degree greater than or equal to 9. 
+
+```{r}
+# Is the degree for each node greater than or equal to 9?
+degree(zach) >= 9
+```
+
+Now, let's use this vector as the basis for our color palette. We'll want to turn our TRUEs into one color, highlighting the members with 9 or more friendships, and our FALSEs into another. To do this, we'll coerce this vector into a factor and overwrite the TRUE/FALSE labels with our color palette labels. This time, we'll use a light gray for our FALSEs and a dark green for our TRUEs. 
+
+```{r}
+# Create degree centrality color palette. 
+degreePal <- factor(degree(zach) >= 9, 
+                    labels = c("#D3D3D3", "#225560"))
+```
+
+Now that we have our color palette for degree centrality, we can overwrite our current color specifications in the **nodes** data frame. 
+
+```{r}
+# Overwrite color column in nodes data frame
+# with degree centrality color palette. 
+nodes$color <- degreePal 
+# Plot. 
+visNetwork(nodes, edges)
+```
+
+Nice! We can easily see the five members who have 9 or more friendships. As an exercise, you could try changing the dark green nodes to the appropriate belt color for each member highlighted. 
+
+
+#### Eigenvector centrality
+
+Eigenvector centrality is similar to degree centrality but with some reweighting. Instead of giving every connection equal weight, a connection to another highly connected node will be weighed more heavily than a connection to a node with very few connections. In other words, *who* a node is connected to matters. Therefore, a node's final centrality score is influenced by the centrality scores of the nodes it is connected to.
+
+To calculate eigenvector centrality for each member in our network, we'll use **eigen_centrality()**. The **eigen_centrality()** function returns a list with the first element, **vector**, containing the centrality score for each node. 
+
+```{r}
+# Calculate eigenvector centrality.
+eigen_centrality(zach)[1]
+```
+
+To color each node by its eigenvector centrality score, we'll need to create a continuous color palette. Check out this [stack overflow post] (https://stackoverflow.com/questions/9946630/colour-points-in-a-plot-differently-depending-on-a-vector-of-values) for how to do this. Essentially, we'll create a color palette function using **colorRampPalette()**. The **colorRampPalette()** function returns another function capable of creating a color palette starting from the first color specified and "ramping" its way up to the second color specified. We'll name our color ramp function **eigScalePal()**. The **eigScalePal()** function we created using **colorRampPalette()** will take an integer as its argument, representing the number of unique colors we want our color palette to contain. For this example, we'll choose 7 unique colors.
+
+To match the 7 colors from our color palette to the eigenvector centrality vector, we'll utilize the **cut()** function. **cut()** will break our vector up into the specified number of intervals. Since we have 7 colors, we'll break the vector up into 7 chunks. Finally, we'll assign this new vector which matches our color palette to our eigenvector centrality vector to the color column of our nodes data frame. 
+
+```{r}
+# Create continuous color palette.
+eigScalePal <- colorRampPalette(c('#E0F4FF','#003049'))
+#This adds a column of color values
+# based on the y values
+nodes$color <- eigScalePal(7)[cut(eigen_centrality(zach)$vector, breaks = 7)]
+# Plot. 
+visNetwork(nodes, edges)
+```
+Looking good! The nodes that are most influential are visible as dark blue. Nodes with less influence are progressively lighter. 
+
+# Find and color communities
+
+A community represents a section of the network where there are more connections within that section than there are between that section and other sections of the network. In other words, a community is a subgraph with comparatively dense connections. To find communities with 'igraph', we'll use **cluster_fast_greedy()** which searches for dense subgraphs through the greedy optimization of a modularity score. The function **cluster_fast_greedy()** returns a communities object showing the number of communities discovered and the nodes which belong to each community. We can use the **membership()** function to summarize community membership as a nodes vector. 
+
+```{r}
+# Find communities. 
+zachComm <- cluster_fast_greedy(zach)
+# Return community membership for each node. 
+membership(zachComm)
+```
+
+While you can definitely change the color specified in the nodes data frame to show each community, we'll utilize **visGroups()** instead. **visGroups()** makes it easy to make changes to each community. We'll start by assigning the membership vector from above to a new **group** column in the nodes data frame. Since we already have a color column that we're no longer interested in, we'll remove the color column from our nodes data frame.   
+
+```{r}
+# Add group column to nodes data frame representing 
+# community membership for each node. 
+nodes$group <- membership(zachComm)
+# Remove color column. 
+nodes$color <- NULL
+```
+
+Now, let's plot our network.
+
+```{r}
+visNetwork(nodes, edges)
+```
+
+Not too bad, huh? However, we can go a bit further without too much additional work. By using **%>% visGroups()**, we can specify modifications for each group on top of our **visNetwork()** plot. We'll supply **visGroups()** with the name of the group we'd like to make changes to as well as the changes we'd like to implement. We'll make changes to each group (1, 2, and 3) and specify a unique color and shape for each community.   
+
+```{r}
+visNetwork(nodes, edges) %>% 
+  visGroups(groupname = "1", color = "#087CA7", shape = "square") %>%
+  visGroups(groupname = "2", color = "#419D78", shape = "triangle") %>%
+  visGroups(groupname = "3", color = "#FFE67C", shape = "oval") %>% 
+  visLegend()
+```
+
+Woo-hoo! Feel free to play around with each community, specifying the colors and shapes of your choosing. 
+
+I hope you enjoyed this tutorial merging the functionality of 'igraph' with 'visNetwork'. Is there something missing you'd like to see? Leave a comment below!
+
+
+
+# Citations
+
+Almende B.V., Benoit Thieurmel and Titouan Robert (2019).
+visNetwork: Network Visualization using ‘vis.js’ Library. R package
+version 2.0.9. https://CRAN.R-project.org/package=visNetwork
+
+Csardi G, Nepusz T: The igraph software package for complex network
+research, InterJournal, Complex Systems 1695. 2006.
+https://igraph.org
+
+R Core Team (2020). R: A language and environment for statistical computing.
+R Foundation for Statistical Computing, Vienna, Austria. URL
+https://www.R-project.org/.
+
+R version 4.0.2 (2020-06-22)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Catalina 10.15.7
+
+Zachary, W. W. (1977). An information flow model for conflict and fission in small groups. Journal of Anthropological Research, 33(4), 452-473. https://doi.org/10.1086/jar.33.4.3629752
+

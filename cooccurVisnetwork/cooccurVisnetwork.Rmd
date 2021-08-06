@@ -7,7 +7,7 @@ output:
 
 Co-occurrence networks are a graphical representation of how frequently variables appear together. They're commonly used in ecology and text mining, where co-occurrence measures how frequently two species are seen together within a sampling site or how frequently two words are present in a single document, respectively. A co-occurrence network allows us to examine several pairs of co-occurring variables simultaneously. To construct a co-occurrence network, each variable is represented by a node, or point. An edge, or link, connecting two nodes represents the co-occurrence between those two variables. 
 
-Here, we'll look at how to construct co-occurrence networks in R using the 'cooccur' and 'visNetwork' packages. In this example, an edge will represent only co-occurrences that are higher or lower than would be expected by chance using a probabilistic model (Veech, 2013). We'll start with 'cooccur' to calculate statistically significant pairwise co-occurrences. We'll then feed those results into 'visNetwork' for a network visualization of species co-occurrence. Ready Freddy?
+Here, we'll look at how to construct co-occurrence networks in R using the 'cooccur' and 'visNetwork' packages. In this example, an edge will represent only co-occurrences that are higher or lower than would be expected by chance using a probabilistic model (Veech, 2013). We'll start with 'cooccur' to calculate statistically significant pairwise co-occurrences. We'll then feed those results into 'visNetwork' for a network visualization of species co-occurrence. Ready, Freddy?
 
 ## Finches data set
 
